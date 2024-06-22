@@ -1,6 +1,8 @@
 ﻿
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Ordering.Application.Data;
 
 namespace Ordering.Infrastructure
 {
@@ -9,15 +11,16 @@ namespace Ordering.Infrastructure
         public static IServiceCollection AddInfrastructureServices
         (this IServiceCollection services, IConfiguration configuration)
         {
-            //var connectionString = configuration.GetConnectionString("Database");
-            //services.AddDbContext<ApplicationDbContext>options =>
-            //{
-                
-            //    options.UseSqlServer(connectionString);
-            //};
+            // Add services to the container.
+            services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();
+            services.AddScoped<ISaveChangesInterceptor, DispatchDomainEventsInterceptor>();
 
-            services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(
-                configuration.GetConnectionString("Database")));
+            services.AddDbContext<ApplicationDbContext>((sp,options) =>
+            {
+                options.UseSqlServer(configuration.GetConnectionString("Database"));
+                options.AddInterceptors(sp.GetServices<ISaveChangesInterceptor>());
+            });
+            services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
             return services;
         }
     }
